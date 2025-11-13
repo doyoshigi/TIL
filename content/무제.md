@@ -1,5 +1,4 @@
 ---
-title: Example Title
 description: Example
 tags:
   - example-tag
