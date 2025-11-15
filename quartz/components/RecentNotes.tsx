@@ -1,12 +1,14 @@
 import { QuartzComponent, QuartzComponentConstructor, QuartzComponentProps } from "./types"
 import { FullSlug, SimpleSlug, resolveRelative } from "../util/path"
 import { QuartzPluginData } from "../plugins/vfile"
-import { byDateAndAlphabetical } from "./PageList"
-import style from "./styles/recentNotes.scss"
-import { Date, getDate } from "./Date"
 import { GlobalConfiguration } from "../cfg"
 import { i18n } from "../i18n"
 import { classNames } from "../util/lang"
+
+import { PageList, SortFn } from "./PageList"
+import style from "./styles/listPage.scss"
+
+import { concatenateResources } from "../util/resources"
 
 interface Options {
   title?: string
@@ -14,7 +16,7 @@ interface Options {
   linkToMore: SimpleSlug | false
   showTags: boolean
   filter: (f: QuartzPluginData) => boolean
-  sort: (f1: QuartzPluginData, f2: QuartzPluginData) => number
+  sort: SortFn
 }
 
 const defaultOptions = (cfg: GlobalConfiguration): Options => ({
@@ -22,61 +24,37 @@ const defaultOptions = (cfg: GlobalConfiguration): Options => ({
   linkToMore: false,
   showTags: true,
   filter: () => true,
-  sort: byDateAndAlphabetical(cfg),
+  sort: (f1: QuartzPluginData, f2: QuartzPluginData): number => {
+    const d1 = f1.dates?.created?.getTime() ?? 0
+    const d2 = f2.dates?.created?.getTime() ?? 0
+
+    if (d2 !== d1) {
+      return d2 - d1
+    }
+
+    const t1 = f1.frontmatter?.title ?? f1.slug ?? ""
+    const t2 = f2.frontmatter?.title ?? f2.slug ?? ""
+    return t1.localeCompare(t2)
+  },
 })
 
 export default ((userOpts?: Partial<Options>) => {
-  const RecentNotes: QuartzComponent = ({
-    allFiles,
-    fileData,
-    displayClass,
-    cfg,
-  }: QuartzComponentProps) => {
-    const opts = { ...defaultOptions(cfg), ...userOpts }
-    const pages = allFiles.filter(opts.filter).sort(opts.sort)
-    const remaining = Math.max(0, pages.length - opts.limit)
-    return (
-      <div class={classNames(displayClass, "recent-notes")}>
-        <h3>{opts.title ?? i18n(cfg.locale).components.recentNotes.title}</h3>
-        <ul class="recent-ul">
-          {pages.slice(0, opts.limit).map((page) => {
-            const title = page.frontmatter?.title ?? i18n(cfg.locale).propertyDefaults.title
-            const tags = page.frontmatter?.tags ?? []
+  const RecentNotes: QuartzComponent = (props: QuartzComponentProps) => {
+    const { allFiles, fileData, displayClass, cfg } = props
 
-            return (
-              <li class="recent-li">
-                <div class="section">
-                  <div class="desc">
-                    <h3>
-                      <a href={resolveRelative(fileData.slug!, page.slug!)} class="internal">
-                        {title}
-                      </a>
-                    </h3>
-                  </div>
-                  {page.dates && (
-                    <p class="meta">
-                      <Date date={getDate(cfg, page)!} locale={cfg.locale} />
-                    </p>
-                  )}
-                  {opts.showTags && (
-                    <ul class="tags">
-                      {tags.map((tag) => (
-                        <li>
-                          <a
-                            class="internal tag-link"
-                            href={resolveRelative(fileData.slug!, `tags/${tag}` as FullSlug)}
-                          >
-                            {tag}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+    const opts = { ...defaultOptions(cfg), ...userOpts }
+
+    const pages = allFiles.filter(opts.filter)
+
+    const remaining = Math.max(0, pages.length - opts.limit)
+
+    return (
+      <div class={classNames(displayClass, "page-listing", "recent-notes")}>
+        <h3>{opts.title ?? i18n(cfg.locale).components.recentNotes.title}</h3>
+        <div>
+          <PageList {...props} allFiles={pages} sort={opts.sort} limit={opts.limit} />
+        </div>
+
         {opts.linkToMore && remaining > 0 && (
           <p>
             <a href={resolveRelative(fileData.slug!, opts.linkToMore)}>
@@ -88,6 +66,6 @@ export default ((userOpts?: Partial<Options>) => {
     )
   }
 
-  RecentNotes.css = style
+  RecentNotes.css = concatenateResources(style, PageList.css)
   return RecentNotes
 }) satisfies QuartzComponentConstructor

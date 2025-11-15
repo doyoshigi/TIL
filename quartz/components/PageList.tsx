@@ -8,15 +8,10 @@ export type SortFn = (f1: QuartzPluginData, f2: QuartzPluginData) => number
 
 export function byDateAndAlphabetical(cfg: GlobalConfiguration): SortFn {
   return (f1, f2) => {
-    // Sort by date/alphabetical
-    if (f1.dates && f2.dates) {
-      // sort descending
-      return getDate(cfg, f2)!.getTime() - getDate(cfg, f1)!.getTime()
-    } else if (f1.dates && !f2.dates) {
-      // prioritize files with dates
-      return -1
-    } else if (!f1.dates && f2.dates) {
-      return 1
+    const d1 = f1.dates?.created?.getTime() ?? 0
+    const d2 = f2.dates?.created?.getTime() ?? 0
+    if (d2 !== d1) {
+      return d2 - d1
     }
 
     // otherwise, sort lexographically by title
@@ -34,15 +29,10 @@ export function byDateAndAlphabeticalFolderFirst(cfg: GlobalConfiguration): Sort
     if (f1IsFolder && !f2IsFolder) return -1
     if (!f1IsFolder && f2IsFolder) return 1
 
-    // If both are folders or both are files, sort by date/alphabetical
-    if (f1.dates && f2.dates) {
-      // sort descending
-      return getDate(cfg, f2)!.getTime() - getDate(cfg, f1)!.getTime()
-    } else if (f1.dates && !f2.dates) {
-      // prioritize files with dates
-      return -1
-    } else if (!f1.dates && f2.dates) {
-      return 1
+    const d1 = f1.dates?.created?.getTime() ?? 0
+    const d2 = f2.dates?.created?.getTime() ?? 0
+    if (d2 !== d1) {
+      return d2 - d1
     }
 
     // otherwise, sort lexographically by title
@@ -70,16 +60,20 @@ export const PageList: QuartzComponent = ({ cfg, fileData, allFiles, limit, sort
         const title = page.frontmatter?.title
         const tags = page.frontmatter?.tags ?? []
 
+        const isFolder = isFolderPath(page.slug ?? "")
+
         return (
           <li class="section-li">
             <div class="section">
               <p class="meta">
-                {page.dates && <Date date={getDate(cfg, page)!} locale={cfg.locale} />}
+                {page.dates && page.dates.created && (
+                  <Date date={page.dates.created} locale={cfg.locale} />
+                )}
               </p>
               <div class="desc">
                 <h3>
                   <a href={resolveRelative(fileData.slug!, page.slug!)} class="internal">
-                    {title}
+                    {isFolder ? "📁 " : ""} {title}
                   </a>
                 </h3>
               </div>
