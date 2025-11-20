@@ -137,7 +137,6 @@ function createFolderNode(
   //   span.textContent = node.displayName
   // }
 
-  // [수정됨] 파일 개수 계산
   const fileCount = getFileCount(node)
   const countText = fileCount > 0 ? ` (${fileCount})` : ""
 
@@ -149,11 +148,10 @@ function createFolderNode(
     a.dataset.for = folderPath
     a.className = "folder-title"
 
-    // [수정됨] 텍스트 대신 HTML을 조작하여 숫자 span 추가
     a.textContent = node.displayName
     if (fileCount > 0) {
       const countSpan = document.createElement("span")
-      countSpan.classList.add("folder-count") // CSS 스타일링을 위한 클래스
+      countSpan.classList.add("folder-count")
       countSpan.textContent = countText
       a.appendChild(countSpan)
     }
@@ -163,12 +161,10 @@ function createFolderNode(
     const span = titleContainer.querySelector(".folder-title") as HTMLElement
     span.textContent = node.displayName
 
-    // [수정됨] 일반 폴더 모드일 때 숫자 추가
     if (fileCount > 0) {
       const countSpan = document.createElement("span")
       countSpan.classList.add("folder-count")
       countSpan.textContent = countText
-      // folder-title 바로 뒤에 붙임
       span.insertAdjacentElement("afterend", countSpan)
     }
   }
